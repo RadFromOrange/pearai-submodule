@@ -21,6 +21,8 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.net.URL
+import java.security.cert.CertificateException
+import javax.net.ssl.*
 
 @Service
 class ContinueAuthService {
@@ -109,8 +111,43 @@ class ContinueAuthService {
         }
     }
 
+        // create a OkHttpClient that bypass SSL verification
+fun createUnsafeOkHttpClient(): OkHttpClient {
+    try {
+        // Create a trust manager that does not validate certificate chains
+        val trustAllCertificates = arrayOf<TrustManager>(object : X509TrustManager {
+            @Throws(CertificateException::class)
+            override fun checkClientTrusted(chain: Array<java.security.cert.X509Certificate>, authType: String) {}
+
+            @Throws(CertificateException::class)
+            override fun checkServerTrusted(chain: Array<java.security.cert.X509Certificate>, authType: String) {}
+
+            override fun getAcceptedIssuers(): Array<java.security.cert.X509Certificate> = arrayOf()
+        })
+
+        // Install the all-trusting trust manager
+        val sslContext = SSLContext.getInstance("SSL")
+        sslContext.init(null, trustAllCertificates, java.security.SecureRandom())
+
+        // Create an ssl socket factory with our all-trusting manager
+        val sslSocketFactory = sslContext.socketFactory
+
+        println("Using custom httpClient by DevX")
+
+        return OkHttpClient.Builder()
+            .sslSocketFactory(sslSocketFactory, trustAllCertificates[0] as X509TrustManager)
+            .hostnameVerifier { _, _ -> true }
+            .build()
+
+        
+    } catch (e: Exception) {
+        throw RuntimeException(e)
+    }
+}
+
     private suspend fun refreshToken(refreshToken: String) = withContext(Dispatchers.IO) {
-        val client = OkHttpClient()
+        val client = createUnsafeOkHttpClient()
+        // val client = OkHttpClient()
         val url = URL(CONTROL_PLANE_URL).toURI().resolve("/auth/refresh").toURL()
         val jsonBody = mapOf("refreshToken" to refreshToken)
         val jsonString = Gson().toJson(jsonBody)
