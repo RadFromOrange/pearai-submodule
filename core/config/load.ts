@@ -832,9 +832,9 @@ async function loadFullConfigNode(
         ideSettings.remoteConfigServerUrl,
       );
       console.log("ideSettings.remoteConfigServerUrl",ideSettings.remoteConfigServerUrl);
-      console.log('RADOU configJsPathForRemote' , configJsPathForRemote);
+      console.log('devx-log configJsPathForRemote' , configJsPathForRemote);
       const fileUrl = pathToFileURL(configJsPathForRemote).href;
-      console.log('RADOU fileUrl' , fileUrl);
+      console.log('devx-log fileUrl' , fileUrl);
       const module = await import(fileUrl);
       if (typeof require !== "undefined") {
         delete require.cache[require.resolve(configJsPathForRemote)];
